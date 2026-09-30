@@ -1,8 +1,13 @@
 # Take-Home Assignment — The Untested API
 
+> 📌 **Submission Documents**:
+> - 📄 **Submission Notes & Reflections**: [`SUBMISSION.md`](./SUBMISSION.md)
+> - 🐞 **Bug Report**: [`BUG_REPORT.md`](./BUG_REPORT.md)
+> - 🧪 **Test Suite**: [`task-api/tests/`](./task-api/tests/) (64 passed, 98.7% statement coverage)
+
 A 2-day take-home assignment. You'll read unfamiliar code, write tests, track down bugs, and ship a small feature.
 
-Read **[ASSIGNMENT.md](./ASSIGNMENT.md)** for the full brief before you start.
+Read **[ASSIGNMENT.md](./ASSIGNMENT.md)** for the full brief.
 
 ---
 
