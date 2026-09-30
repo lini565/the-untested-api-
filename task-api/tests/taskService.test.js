@@ -72,47 +72,55 @@ describe('taskService Unit Tests', () => {
   });
 
   describe('getByStatus', () => {
-    test('should return tasks matching given status', () => {
+    test('should return tasks matching given status strictly', () => {
       const t1 = taskService.create({ title: 'Task 1', status: 'todo' });
       const t2 = taskService.create({ title: 'Task 2', status: 'in_progress' });
       const t3 = taskService.create({ title: 'Task 3', status: 'done' });
 
       const todoTasks = taskService.getByStatus('todo');
-      expect(todoTasks).toContainEqual(t1);
+      expect(todoTasks).toEqual([t1]);
 
       const inProgressTasks = taskService.getByStatus('in_progress');
       expect(inProgressTasks).toEqual([t2]);
 
       const doneTasks = taskService.getByStatus('done');
-      expect(doneTasks).toContainEqual(t3);
+      expect(doneTasks).toEqual([t3]);
     });
 
-    test('should expose substring matching bug in getByStatus implementation', () => {
-      // NOTE: getByStatus currently uses t.status.includes(status), which causes substring overlap
-      const t1 = taskService.create({ title: 'Task 1', status: 'todo' });
-      const t2 = taskService.create({ title: 'Task 2', status: 'done' });
+    test('should not match partial status substring (bugfix verification)', () => {
+      taskService.create({ title: 'Task 1', status: 'todo' });
+      taskService.create({ title: 'Task 2', status: 'done' });
 
-      // Searching status='do' matches both 'todo' and 'done'
+      // Searching status='do' should strictly match nothing since status must be exact
       const matchedDo = taskService.getByStatus('do');
-      expect(matchedDo).toEqual([t1, t2]);
+      expect(matchedDo).toEqual([]);
     });
   });
 
   describe('getPaginated', () => {
-    test('should return paginated slice of tasks', () => {
-      for (let i = 1; i <= 15; i++) {
+    test('should return paginated slice of tasks with 1-based indexing', () => {
+      for (let i = 1; i <= 5; i++) {
         taskService.create({ title: `Task ${i}` });
       }
 
-      // Page 0 offset test based on current code implementation (offset = page * limit)
-      const page0 = taskService.getPaginated(0, 5);
-      expect(page0.length).toBe(5);
-      expect(page0[0].title).toBe('Task 1');
+      // Page 1 should return first 2 items (indices 0 and 1)
+      const page1 = taskService.getPaginated(1, 2);
+      expect(page1.length).toBe(2);
+      expect(page1[0].title).toBe('Task 1');
+      expect(page1[1].title).toBe('Task 2');
 
-      const page1 = taskService.getPaginated(1, 5);
-      expect(page1.length).toBe(5);
-      // Notice current implementation with page 1 gives offset = 1 * 5 = 5 (Task 6), skipping first 5
-      expect(page1[0].title).toBe('Task 6');
+      // Page 2 should return next 2 items (indices 2 and 3)
+      const page2 = taskService.getPaginated(2, 2);
+      expect(page2.length).toBe(2);
+      expect(page2[0].title).toBe('Task 3');
+      expect(page2[1].title).toBe('Task 4');
+    });
+
+    test('should default to page 1 when page <= 0 is provided', () => {
+      taskService.create({ title: 'Task 1' });
+      const page0 = taskService.getPaginated(0, 5);
+      expect(page0.length).toBe(1);
+      expect(page0[0].title).toBe('Task 1');
     });
   });
 
@@ -179,19 +187,35 @@ describe('taskService Unit Tests', () => {
   });
 
   describe('completeTask', () => {
-    test('should mark task as completed with done status and timestamp', () => {
+    test('should mark task as completed preserving original priority (bugfix verification)', () => {
       const created = taskService.create({ title: 'Task to Complete', priority: 'high' });
       const completed = taskService.completeTask(created.id);
 
       expect(completed.id).toBe(created.id);
       expect(completed.status).toBe('done');
       expect(completed.completedAt).toBeDefined();
-      // Notice current bug: priority gets reset to 'medium' in current code
-      expect(completed.priority).toBe('medium');
+      expect(completed.priority).toBe('high'); // Priority preserved!
     });
 
     test('should return null when trying to complete a non-existent task', () => {
       const result = taskService.completeTask('non-existent-id');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('assignTask', () => {
+    test('should assign task to specified user and return updated task', () => {
+      const created = taskService.create({ title: 'Task to Assign' });
+      expect(created.assignee).toBeNull();
+
+      const assigned = taskService.assignTask(created.id, '  Bob Builder  ');
+      expect(assigned.id).toBe(created.id);
+      expect(assigned.assignee).toBe('Bob Builder');
+      expect(taskService.findById(created.id).assignee).toBe('Bob Builder');
+    });
+
+    test('should return null when assigning a non-existent task', () => {
+      const result = taskService.assignTask('non-existent-id', 'Alice');
       expect(result).toBeNull();
     });
   });

@@ -43,9 +43,8 @@ describe('Task API Integration Tests', () => {
       const res = await request(app).get('/tasks?page=1&limit=2');
       expect(res.status).toBe(200);
       expect(res.body.length).toBe(2);
-      // Documenting current implementation behavior: page=1 with limit=2 uses offset = 1 * 2 = 2
-      expect(res.body[0].title).toBe('Task 3');
-      expect(res.body[1].title).toBe('Task 4');
+      expect(res.body[0].title).toBe('Task 1');
+      expect(res.body[1].title).toBe('Task 2');
     });
 
     test('should fallback to default page=1 and limit=10 if invalid numbers are passed', async () => {
@@ -88,6 +87,7 @@ describe('Task API Integration Tests', () => {
       expect(res.body.description).toBe(payload.description);
       expect(res.body.priority).toBe('high');
       expect(res.body.status).toBe('todo');
+      expect(res.body.assignee).toBeNull();
       expect(res.body.id).toBeDefined();
     });
 
@@ -181,6 +181,40 @@ describe('Task API Integration Tests', () => {
 
     test('should return 404 when completing non-existent task', async () => {
       const res = await request(app).patch('/tasks/non-existent-id/complete');
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Task not found');
+    });
+  });
+
+  describe('PATCH /tasks/:id/assign', () => {
+    test('should assign task to user (happy path)', async () => {
+      const created = taskService.create({ title: 'Task to assign' });
+
+      const res = await request(app)
+        .patch(`/tasks/${created.id}/assign`)
+        .send({ assignee: 'Charlie' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.id).toBe(created.id);
+      expect(res.body.assignee).toBe('Charlie');
+    });
+
+    test('should return 400 if assignee is missing or empty string', async () => {
+      const created = taskService.create({ title: 'Task' });
+
+      const res1 = await request(app).patch(`/tasks/${created.id}/assign`).send({});
+      expect(res1.status).toBe(400);
+      expect(res1.body.error).toContain('assignee is required');
+
+      const res2 = await request(app).patch(`/tasks/${created.id}/assign`).send({ assignee: '   ' });
+      expect(res2.status).toBe(400);
+      expect(res2.body.error).toContain('assignee is required');
+    });
+
+    test('should return 404 if task id does not exist', async () => {
+      const res = await request(app)
+        .patch('/tasks/non-existent-id/assign')
+        .send({ assignee: 'Charlie' });
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('Task not found');
     });

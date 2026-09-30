@@ -1,4 +1,4 @@
-const { validateCreateTask, validateUpdateTask } = require('../src/utils/validators');
+const { validateCreateTask, validateUpdateTask, validateAssignTask } = require('../src/utils/validators');
 
 describe('Validators', () => {
   describe('validateCreateTask', () => {
@@ -91,6 +91,30 @@ describe('Validators', () => {
     test('should fail when updated dueDate is invalid', () => {
       const result = validateUpdateTask({ dueDate: 'bad-date' });
       expect(result).toBe('dueDate must be a valid ISO date string');
+    });
+  });
+
+  describe('validateAssignTask', () => {
+    test('should pass for a valid assignee string', () => {
+      const result = validateAssignTask({ assignee: 'Alice' });
+      expect(result).toBeNull();
+    });
+
+    test('should fail when body is missing or null', () => {
+      expect(validateAssignTask(null)).toBe('assignee is required and must be a non-empty string');
+    });
+
+    test('should fail when assignee is missing', () => {
+      expect(validateAssignTask({})).toBe('assignee is required and must be a non-empty string');
+    });
+
+    test('should fail when assignee is not a string', () => {
+      expect(validateAssignTask({ assignee: 123 })).toBe('assignee is required and must be a non-empty string');
+    });
+
+    test('should fail when assignee is empty or whitespace', () => {
+      expect(validateAssignTask({ assignee: '' })).toBe('assignee is required and must be a non-empty string');
+      expect(validateAssignTask({ assignee: '   ' })).toBe('assignee is required and must be a non-empty string');
     });
   });
 });

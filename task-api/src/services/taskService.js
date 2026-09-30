@@ -6,11 +6,13 @@ const getAll = () => [...tasks];
 
 const findById = (id) => tasks.find((t) => t.id === id);
 
-const getByStatus = (status) => tasks.filter((t) => t.status.includes(status));
+const getByStatus = (status) => tasks.filter((t) => t.status === status);
 
 const getPaginated = (page, limit) => {
-  const offset = page * limit;
-  return tasks.slice(offset, offset + limit);
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.max(1, parseInt(limit, 10) || 10);
+  const offset = (pageNum - 1) * limitNum;
+  return tasks.slice(offset, offset + limitNum);
 };
 
 const getStats = () => {
@@ -20,7 +22,9 @@ const getStats = () => {
 
   tasks.forEach((t) => {
     if (counts[t.status] !== undefined) counts[t.status]++;
-    if (t.dueDate && t.status !== 'done' && new Date(t.dueDate) < now) {
+    const dueDateParsed = t.dueDate ? new Date(t.dueDate) : null;
+    const isValidDate = dueDateParsed && !isNaN(dueDateParsed.getTime());
+    if (isValidDate && t.status !== 'done' && dueDateParsed < now) {
       overdue++;
     }
   });
@@ -28,7 +32,7 @@ const getStats = () => {
   return { ...counts, overdue };
 };
 
-const create = ({ title, description = '', status = 'todo', priority = 'medium', dueDate = null }) => {
+const create = ({ title, description = '', status = 'todo', priority = 'medium', dueDate = null, assignee = null }) => {
   const task = {
     id: uuidv4(),
     title,
@@ -36,6 +40,7 @@ const create = ({ title, description = '', status = 'todo', priority = 'medium',
     status,
     priority,
     dueDate,
+    assignee,
     completedAt: null,
     createdAt: new Date().toISOString(),
   };
@@ -66,9 +71,22 @@ const completeTask = (id) => {
 
   const updated = {
     ...task,
-    priority: 'medium',
     status: 'done',
     completedAt: new Date().toISOString(),
+  };
+
+  const index = tasks.findIndex((t) => t.id === id);
+  tasks[index] = updated;
+  return updated;
+};
+
+const assignTask = (id, assignee) => {
+  const task = findById(id);
+  if (!task) return null;
+
+  const updated = {
+    ...task,
+    assignee: assignee.trim(),
   };
 
   const index = tasks.findIndex((t) => t.id === id);
@@ -90,5 +108,6 @@ module.exports = {
   update,
   remove,
   completeTask,
+  assignTask,
   _reset,
 };
